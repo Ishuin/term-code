@@ -279,13 +279,9 @@ export async function loadConfig(options: any = {}): Promise<any> {
   validateConfig(config);
   
   // Configure logger
-  import('../utils/logger.js').then(loggerModule => {
-    if (loggerModule.configureLogger) {
-      loggerModule.configureLogger(config);
-    }
-  }).catch(error => {
-    logger.warn('Failed to configure logger', error);
-  });
+  if (config.logger && config.logger.level) {
+    logger.debug('Setting log level to', config.logger.level);
+  }
   
   return config;
 }

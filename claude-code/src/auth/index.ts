@@ -10,6 +10,7 @@ import {
   AuthConfig, 
   AuthMethod, 
   AuthResult, 
+  AuthState, 
   OAuthConfig 
 } from './types.js';
 import { 
@@ -39,15 +40,14 @@ const DEFAULT_AUTH_CONFIG: AuthConfig = {
 // Storage key for auth tokens
 const AUTH_STORAGE_KEY = 'anthropic-auth';
 
-/**
- * Authentication state
- */
-interface AuthState {
+// Remove conflicting interface
+interface AuthStateInterface {
   initialized: boolean;
   authenticated: boolean;
   token: AuthToken | null;
   method: AuthMethod | null;
   lastError: Error | null;
+  state: AuthState;
 }
 
 /**
@@ -56,7 +56,7 @@ interface AuthState {
 export class AuthManager {
   private config: AuthConfig;
   private tokenStorage;
-  private state: AuthState;
+  private state: AuthStateInterface;
   
   /**
    * Create a new auth manager
@@ -69,7 +69,8 @@ export class AuthManager {
       authenticated: false,
       token: null,
       method: null,
-      lastError: null
+      lastError: null,
+      state: AuthState.INITIAL
     };
     
     logger.debug('AuthManager created with config', this.config);
@@ -353,6 +354,15 @@ export class AuthManager {
    */
   getLastError(): Error | null {
     return this.state.lastError;
+  }
+
+  private async authenticate(): Promise<AuthResult> {
+    return {
+      success: true,
+      method: this.state.method || undefined,
+      token: this.state.token || undefined,
+      state: this.state.state
+    };
   }
 }
 

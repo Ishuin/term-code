@@ -13,6 +13,35 @@ import { formatErrorForDisplay } from '../errors/formatter.js';
 import { authManager } from '../auth/index.js';
 import { createUserError } from '../errors/formatter.js';
 import { ErrorCategory } from '../errors/types.js';
+import { ollamaCommands } from './ollama.js';
+import commandSystem from './index.js';
+
+// Registry shortcut function
+function registerCommand(name: string, command: CommandDef): void {
+  commandSystem.commandRegistry.register(command);
+}
+
+// Add this function at the top of the file
+async function safeComplete(client: any, prompt: string, options?: any): Promise<any> {
+  if (typeof client.complete === 'function') {
+    return await client.complete(prompt, options);
+  } else if (typeof client.generateCompletion === 'function') {
+    const response = await client.generateCompletion({
+      messages: [{ role: 'user', content: prompt }],
+      options
+    });
+    
+    return {
+      ...response,
+      content: [{
+        text: response.text,
+        role: 'assistant'
+      }]
+    };
+  } else {
+    throw new Error('AI client does not support text completion');
+  }
+}
 
 /**
  * Register all commands
@@ -44,6 +73,11 @@ export function registerCommands(): void {
   registerHistoryCommand();
   registerCommandsCommand();
   registerHelpCommand();
+  
+  // Register Ollama commands
+  ollamaCommands.forEach(command => {
+    registerCommand(command.name, command);
+  });
   
   logger.info('Commands registered successfully');
 }
@@ -200,7 +234,7 @@ function registerAskCommand(): void {
         
         // Get AI client and send question
         const aiClient = getAIClient();
-        const result = await aiClient.complete(question);
+        const result = await safeComplete(aiClient, question);
         
         // Extract and print the response
         const responseText = result.content[0]?.text || 'No response received';
@@ -275,7 +309,7 @@ function registerExplainCommand(): void {
         
         // Get AI client and send request
         const aiClient = getAIClient();
-        const result = await aiClient.complete(prompt);
+        const result = await safeComplete(aiClient, prompt);
         
         // Extract and print the response
         const responseText = result.content[0]?.text || 'No explanation received';
@@ -345,7 +379,7 @@ function registerRefactorCommand(): void {
         
         // Get AI client and send request
         const aiClient = getAIClient();
-        const result = await aiClient.complete(prompt);
+        const result = await safeComplete(aiClient, prompt);
         
         // Extract and print the response
         const responseText = result.content[0]?.text || 'No refactored code received';
@@ -426,7 +460,7 @@ function registerFixCommand(): void {
         
         // Get AI client and send request
         const aiClient = getAIClient();
-        const result = await aiClient.complete(prompt);
+        const result = await safeComplete(aiClient, prompt);
         
         // Extract and print the response
         const responseText = result.content[0]?.text || 'No fixed code received';
@@ -492,7 +526,7 @@ function registerGenerateCommand(): void {
         
         // Get AI client and send request
         const aiClient = getAIClient();
-        const result = await aiClient.complete(fullPrompt);
+        const result = await safeComplete(aiClient, fullPrompt);
         
         // Extract and print the response
         const responseText = result.content[0]?.text || 'No code generated';

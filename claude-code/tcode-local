@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec /usr/bin/node /mnt/d/Projects/ghuntley-code/term-code/claude-code/dist/cli.js "$@"

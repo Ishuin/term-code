@@ -13,7 +13,16 @@ import { initAI } from './ai/index.js';
 import { authManager } from './auth/index.js';
 import { registerCommands } from './commands/register.js';
 import { UserError } from './errors/types.js';
-import pkg from '../package.json' assert { type: 'json' };
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get current file's directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Read package.json
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
 
 // Get version from package.json
 const version = pkg.version;

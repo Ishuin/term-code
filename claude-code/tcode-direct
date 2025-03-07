@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Absolute simplest way to run the term-code script
+# Avoids issues with line endings and PATH resolution
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Run with node
+node "${SCRIPT_DIR}/run-term-code.js" "$@" 

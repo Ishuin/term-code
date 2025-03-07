@@ -57,40 +57,22 @@ export enum AuthMethod {
 /**
  * Authentication states
  */
+export interface AuthStateData {
+  initialized: boolean;
+  authenticated: boolean;
+  token: AuthToken | null;
+  method: AuthMethod | null;
+  lastError: Error | null;
+  state: AuthState;
+}
+
 export enum AuthState {
-  /**
-   * Initial state
-   */
   INITIAL = 'initial',
-  
-  /**
-   * Authentication in progress
-   */
   AUTHENTICATING = 'authenticating',
-  
-  /**
-   * Successfully authenticated
-   */
   AUTHENTICATED = 'authenticated',
-  
-  /**
-   * Authentication failed
-   */
   FAILED = 'failed',
-  
-  /**
-   * Refreshing authentication
-   */
   REFRESHING = 'refreshing',
-  
-  /**
-   * Expired authentication
-   */
   EXPIRED = 'expired',
-  
-  /**
-   * Unauthenticated state
-   */
   UNAUTHENTICATED = 'unauthenticated'
 }
 

@@ -4,43 +4,40 @@
  * Provides functions for creating and handling user prompts in the terminal.
  */
 
-import inquirer from 'inquirer';
+import inquirer, { Question, Answers } from 'inquirer';
 import { PromptOptions, TerminalConfig } from './types.js';
 import { logger } from '../utils/logger.js';
 
 /**
  * Create and display a prompt for user input
  */
-export async function createPrompt<T>(options: PromptOptions, config: TerminalConfig): Promise<T> {
+export async function createPrompt<T extends Answers>(options: any, config: TerminalConfig): Promise<T> {
   logger.debug('Creating prompt', { type: options.type, name: options.name });
   
-  // Add validation for required fields
-  if (options.required && !options.validate) {
-    options.validate = (input: any) => {
-      if (!input && input !== false && input !== 0) {
-        return `${options.name} is required`;
-      }
-      return true;
-    };
-  }
-  
-  // Handle non-interactive terminals
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     logger.warn('Terminal is not interactive, cannot prompt for input');
     throw new Error('Cannot prompt for input in non-interactive terminal');
   }
   
   try {
-    // Use Inquirer to create the prompt
-    const result = await inquirer.prompt([{
-      ...options,
-      // Make sure name is a string
-      name: String(options.name)
-    }]);
+    // Create a properly typed question object
+    const question = {
+      type: options.type || 'input',
+      name: options.name || 'value',
+      message: options.message || '',
+      default: options.default,
+      // Only include properties that exist
+      ...(options.choices && { choices: options.choices }),
+      ...(options.validate && { validate: options.validate }),
+      ...(options.filter && { filter: options.filter }),
+      ...(options.transformer && { transformer: options.transformer }),
+      ...(options.pageSize && { pageSize: options.pageSize }),
+      ...(options.mask && { mask: options.mask })
+    };
     
-    logger.debug('Prompt result', { name: options.name, result: result[options.name] });
-    
-    return result;
+    const result = await inquirer.prompt([question]);
+    logger.debug('Prompt result', { name: options.name, result });
+    return result as T;
   } catch (error) {
     logger.error('Error in prompt', error);
     throw new Error(`Failed to prompt for ${options.name}: ${error instanceof Error ? error.message : String(error)}`);

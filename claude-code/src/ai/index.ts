@@ -1,7 +1,7 @@
 /**
  * AI Module
  * 
- * Provides AI capabilities using Claude, Anthropic's large language model.
+ * Provides AI capabilities using various language models.
  * This module handles initialization, configuration, and access to AI services.
  */
 
@@ -10,49 +10,84 @@ import { logger } from '../utils/logger.js';
 import { createUserError } from '../errors/formatter.js';
 import { ErrorCategory } from '../errors/types.js';
 import { authManager } from '../auth/index.js';
+import { AIClientInterface } from './types.js';
+import { createAIClient, AIProvider, ProviderConfig } from './providers/index.js';
 
 // Singleton AI client instance
-let aiClient: AIClient | null = null;
+let aiClient: AIClientInterface | null = null;
+let activeProvider: AIProvider | null = null;
 
 /**
  * Initialize the AI module
  */
-export async function initAI(config: any = {}): Promise<AIClient> {
+export async function initAI(config: any = {}): Promise<AIClientInterface> {
   logger.info('Initializing AI module');
   
   try {
-    // Check if we have authentication
-    if (!authManager.isAuthenticated()) {
-      throw createUserError('Authentication required for AI services', {
-        category: ErrorCategory.AUTHENTICATION,
-        resolution: 'Please log in using the login command or provide an API key.'
-      });
+    // Check which provider to use - first from config, then from env var
+    const providerFromEnv = process.env.TERM_CODE_PROVIDER?.toLowerCase();
+    let selectedProvider: AIProvider;
+    
+    if (config.provider) {
+      selectedProvider = config.provider;
+    } else if (providerFromEnv === 'ollama') {
+      selectedProvider = AIProvider.OLLAMA;
+      logger.debug('Using Ollama provider from environment variable');
+    } else if (providerFromEnv === 'claude') {
+      selectedProvider = AIProvider.CLAUDE;
+      logger.debug('Using Claude provider from environment variable');
+    } else {
+      // Default to Ollama if not specified
+      selectedProvider = AIProvider.OLLAMA;
     }
     
-    // Get the auth token
-    const authToken = authManager.getToken();
-    if (!authToken || !authToken.accessToken) {
-      throw createUserError('No valid authentication token available', {
-        category: ErrorCategory.AUTHENTICATION,
-        resolution: 'Please log in again with the login command.'
-      });
+    const providerConfig: Partial<ProviderConfig> = {
+      provider: selectedProvider,
+      options: config.providerOptions || {}
+    };
+    
+    // Only require authentication for Claude
+    if (providerConfig.provider === AIProvider.CLAUDE) {
+      // Check if we have authentication
+      if (!authManager.isAuthenticated()) {
+        throw createUserError('Authentication required for Claude AI services', {
+          category: ErrorCategory.AUTHENTICATION,
+          resolution: 'Please log in using the login command or provide an API key, or use Ollama provider instead.'
+        });
+      }
+      
+      // Get the auth token
+      const authToken = authManager.getToken();
+      if (!authToken || !authToken.accessToken) {
+        throw createUserError('No valid authentication token available', {
+          category: ErrorCategory.AUTHENTICATION,
+          resolution: 'Please log in again with the login command or use Ollama provider instead.'
+        });
+      }
+      
+      // Add auth token to provider options
+      providerConfig.options = { 
+        ...providerConfig.options, 
+        authToken: authToken.accessToken 
+      };
     }
     
-    // Create AI client
-    aiClient = new AIClient(config, authToken.accessToken);
+    // Create AI client based on provider
+    aiClient = createAIClient(providerConfig);
+    activeProvider = providerConfig.provider || AIProvider.OLLAMA;
     
     // Test connection
     logger.debug('Testing connection to AI service');
     const connectionSuccess = await aiClient.testConnection();
     
     if (!connectionSuccess) {
-      throw createUserError('Failed to connect to Claude AI service', {
+      throw createUserError(`Failed to connect to ${activeProvider} AI service`, {
         category: ErrorCategory.CONNECTION,
-        resolution: 'Check your internet connection and API key, then try again.'
+        resolution: 'Check your internet connection and try again.'
       });
     }
     
-    logger.info('AI module initialized successfully');
+    logger.info('AI module initialized successfully', { provider: activeProvider });
     return aiClient;
   } catch (error) {
     logger.error('Failed to initialize AI module', error);
@@ -60,7 +95,7 @@ export async function initAI(config: any = {}): Promise<AIClient> {
     throw createUserError('Failed to initialize AI capabilities', {
       cause: error,
       category: ErrorCategory.INITIALIZATION,
-      resolution: 'Check your authentication and internet connection, then try again.'
+      resolution: 'Check your settings and internet connection, then try again.'
     });
   }
 }
@@ -68,7 +103,7 @@ export async function initAI(config: any = {}): Promise<AIClient> {
 /**
  * Get the AI client instance
  */
-export function getAIClient(): AIClient {
+export function getAIClient(): AIClientInterface {
   if (!aiClient) {
     throw createUserError('AI module not initialized', {
       category: ErrorCategory.INITIALIZATION,
@@ -80,6 +115,13 @@ export function getAIClient(): AIClient {
 }
 
 /**
+ * Get the active provider
+ */
+export function getActiveProvider(): AIProvider | null {
+  return activeProvider;
+}
+
+/**
  * Check if AI module is initialized
  */
 export function isAIInitialized(): boolean {
@@ -88,4 +130,5 @@ export function isAIInitialized(): boolean {
 
 // Re-export types and components
 export * from './client.js';
-export * from './prompts.js'; 
+export * from './prompts.js';
+export * from './providers/index.js'; 

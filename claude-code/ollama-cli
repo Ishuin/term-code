@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Simple wrapper for the direct-ollama.js script
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NODE_PATH=$(which node)
+
+if [ $# -eq 0 ]; then
+  echo "Ollama CLI - Simple interface for Ollama"
+  echo ""
+  echo "Usage: ./ollama-cli <command> [args]"
+  echo ""
+  echo "Available commands:"
+  echo "  server <url>     - Set and test server URL"
+  echo "                     Default: http://host.docker.internal:11434"
+  echo "  list             - List available models"
+  echo "  info <model>     - Get info about a specific model"
+  echo ""
+  echo "Examples:"
+  echo "  ./ollama-cli server http://host.docker.internal:11434"
+  echo "  ./ollama-cli list"
+  echo "  ./ollama-cli info deepseek-r1:8b"
+  exit 0
+fi
+
+# Store URL preference if set
+if [ "$1" = "server" ] && [ -n "$2" ]; then
+  echo "export OLLAMA_BASE_URL=$2" > "${SCRIPT_DIR}/.ollama_config"
+fi
+
+# Load config if exists
+if [ -f "${SCRIPT_DIR}/.ollama_config" ]; then
+  source "${SCRIPT_DIR}/.ollama_config"
+fi
+
+# Run the direct-ollama.js script
+$NODE_PATH "${SCRIPT_DIR}/scripts/direct-ollama.js" "$@" 

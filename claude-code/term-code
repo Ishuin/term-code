@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Direct execution script for Term-Code
+# Uses full paths to avoid PATH-related issues
+
+# Get the real directory path of this script
+REAL_DIR="$(cd "$(dirname "$(realpath "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" && pwd)"
+
+# Set Ollama environment variables
+export OLLAMA_BASE_URL="http://host.docker.internal:11434"
+export OLLAMA_PROVIDER="true"
+
+# Ensure node-fetch is installed
+if ! npm list -C "$REAL_DIR" node-fetch &>/dev/null; then
+  echo "Installing required dependency: node-fetch..."
+  (cd "$REAL_DIR" && npm install node-fetch@3.3.2)
+fi
+
+# Check if the JavaScript file has correct line endings
+JS_FILE="$REAL_DIR/run-term-code.js"
+if head -n 1 "$JS_FILE" | grep -q '\r'; then
+  echo "Fixing line endings in $JS_FILE..."
+  tr -d '\r' < "$JS_FILE" > "$JS_FILE.tmp" && mv "$JS_FILE.tmp" "$JS_FILE"
+  chmod +x "$JS_FILE"
+fi
+
+# Execute the script directly with node
+node "$REAL_DIR/run-term-code.js" "$@" 

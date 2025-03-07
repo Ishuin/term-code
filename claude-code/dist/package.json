@@ -1,0 +1,9 @@
+{
+  "name": "term-code",
+  "version": "1.0.0",
+  "description": "Terminal-based AI coding assistant",
+  "type": "module",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}
