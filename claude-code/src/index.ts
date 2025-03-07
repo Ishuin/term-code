@@ -16,6 +16,7 @@ import { initExecutionEnvironment } from './execution/index.js';
 import { initErrorHandling } from './errors/index.js';
 import { initTelemetry } from './telemetry/index.js';
 import { logger } from './utils/logger.js';
+import { ErrorLevel } from './errors/types.js';
 
 /**
  * Application instance that holds references to all initialized subsystems
@@ -53,7 +54,7 @@ export async function initialize(options: any = {}): Promise<AppInstance> {
     const auth = await initAuthentication(config);
     
     // Initialize AI client
-    const ai = await initAI(config, auth);
+    const ai = await initAI(config);
     
     // Initialize codebase analysis
     const codebase = await initCodebaseAnalysis(config);
@@ -95,9 +96,8 @@ export async function initialize(options: any = {}): Promise<AppInstance> {
       telemetry
     };
   } catch (error) {
-    errors.handleFatalError(error);
-    // This is just to satisfy TypeScript since handleFatalError will exit the process
-    throw error;
+    errors.handleError(error, { level: ErrorLevel.FATAL });
+    process.exit(1);
   }
 }
 

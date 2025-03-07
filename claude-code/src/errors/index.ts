@@ -45,15 +45,8 @@ class ErrorHandlerImpl implements ErrorManager {
   /**
    * Handle a fatal error that should terminate the application
    */
-  handleFatalError(error: unknown): never {
-    const formattedError = this.formatError(error, {
-      level: ErrorLevel.CRITICAL,
-      category: ErrorCategory.APPLICATION
-    });
-    
-    logger.error('FATAL ERROR:', formattedError);
-    
-    // Exit with error code
+  handleFatalError(error: Error): void {
+    this.handleError(error, { level: ErrorLevel.FATAL });
     process.exit(1);
   }
   
@@ -61,58 +54,49 @@ class ErrorHandlerImpl implements ErrorManager {
    * Handle an unhandled promise rejection
    */
   handleUnhandledRejection(reason: unknown, promise: Promise<unknown>): void {
-    const formattedError = this.formatError(reason, {
-      level: ErrorLevel.MAJOR,
-      category: ErrorCategory.APPLICATION,
-      context: { promise }
-    });
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    const formattedError = this.formatError(err);
     
-    logger.error('Unhandled Promise Rejection:', formattedError);
+    logger.error('Unhandled rejection:', formattedError);
   }
   
   /**
    * Handle an uncaught exception
    */
   handleUncaughtException(error: unknown): void {
-    const formattedError = this.formatError(error, {
-      level: ErrorLevel.CRITICAL,
-      category: ErrorCategory.APPLICATION
-    });
+    const err = error instanceof Error ? error : new Error(String(error));
+    const formattedError = this.formatError(err);
     
-    logger.error('Uncaught Exception:', formattedError);
+    logger.error('Uncaught exception:', formattedError);
   }
   
   /**
    * Handle a general error
    */
-  handleError(error: unknown, options: ErrorOptions = {}): void {
+  handleError(error: Error | unknown, options: ErrorOptions = {}): void {
+    const err = error instanceof Error ? error : new Error(String(error));
     const category = options.category || ErrorCategory.APPLICATION;
-    const level = options.level || ErrorLevel.MINOR;
+    const level = options.level || ErrorLevel.ERROR;
     
     // Track error count for rate limiting
-    const errorKey = `${category}:${level}:${this.getErrorMessage(error)}`;
+    const errorKey = `${category}:${level}:${err.message}`;
     const count = (this.errorCount.get(errorKey) || 0) + 1;
     this.errorCount.set(errorKey, count);
     
     // Format the error
-    const formattedError = this.formatError(error, options);
+    const formattedError = this.formatError(err);
     
-    // Log the error based on level
-    switch (level) {
-      case ErrorLevel.CRITICAL:
-      case ErrorLevel.MAJOR:
-        logger.error(`[${ErrorCategory[category]}] ${formattedError.message}`, formattedError);
-        break;
-      case ErrorLevel.MINOR:
-        logger.warn(`[${ErrorCategory[category]}] ${formattedError.message}`, formattedError);
-        break;
-      case ErrorLevel.INFORMATIONAL:
-        logger.info(`[${ErrorCategory[category]}] ${formattedError.message}`, formattedError);
-        break;
+    // Log based on level
+    if (level === ErrorLevel.FATAL || level === ErrorLevel.ERROR) {
+      logger.error(`[${ErrorCategory[category]}] ${formattedError.message}`, formattedError);
+    } else if (level === ErrorLevel.WARNING) {
+      logger.warn(`[${ErrorCategory[category]}] ${formattedError.message}`, formattedError);
+    } else {
+      logger.info(`[${ErrorCategory[category]}] ${formattedError.message}`, formattedError);
     }
     
     // Report to telemetry/monitoring if appropriate
-    if (level === ErrorLevel.CRITICAL || level === ErrorLevel.MAJOR) {
+    if (level === ErrorLevel.FATAL || level === ErrorLevel.MAJOR) {
       this.reportError(formattedError, options);
     }
   }
@@ -120,34 +104,15 @@ class ErrorHandlerImpl implements ErrorManager {
   /**
    * Format an error object for consistent handling
    */
-  private formatError(error: unknown, options: ErrorOptions = {}): any {
-    try {
-      return formatErrorForDisplay(error, options);
-    } catch (formattingError) {
-      // If formatting fails, return a basic error object
-      return {
-        message: this.getErrorMessage(error),
-        originalError: error,
-        formattingError
-      };
-    }
+  formatError(error: Error | unknown): Error {
+    return error instanceof Error ? error : new Error(String(error));
   }
   
   /**
    * Get an error message from any error type
    */
-  private getErrorMessage(error: unknown): string {
-    if (error instanceof Error) {
-      return error.message;
-    } else if (typeof error === 'string') {
-      return error;
-    } else {
-      try {
-        return JSON.stringify(error);
-      } catch {
-        return String(error);
-      }
-    }
+  getErrorMessage(error: Error): string {
+    return error.message;
   }
   
   /**
@@ -163,6 +128,11 @@ class ErrorHandlerImpl implements ErrorManager {
       level: options.level,
       category: options.category
     });
+  }
+
+  logError(error: Error | unknown, level: ErrorLevel = ErrorLevel.ERROR): void {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(err.message, err);
   }
 }
 

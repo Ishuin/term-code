@@ -1,0 +1,70 @@
+ {
+  "project": {
+    "name": "claude-code-cleanroom",
+    "rules": {
+      "nodeVersion": ">=18.0.0",
+      "primaryPackageJson": "claude-code/package.json",
+      "typescript": true,
+      "directories": {
+        "source": "claude-code/src",
+        "scripts": "claude-code/scripts",
+        "specs": "specs"
+      }
+    },
+    "dependencies": {
+      "core": [
+        "@anthropic-ai/claude-code@0.2.29",
+        "open@10.1.0",
+        "uuid@11.1.0"
+      ],
+      "dev": [
+        "@types/node@22.13.8",
+        "@types/uuid@10.0.0"
+      ]
+    },
+    "apiUsage": {
+      "claudeCode": {
+        "rateLimit": true,
+        "sensitiveData": false,
+        "privacyCompliance": true,
+        "bestPractices": [
+          "Cache responses when possible",
+          "Batch related operations",
+          "Avoid redundant API calls",
+          "Use local operations first"
+        ]
+      },
+      "cursorIDE": {
+        "rateLimit": true,
+        "optimizations": [
+          "Use grep_search before semantic_search",
+          "Prefer file_search over directory traversal",
+          "Read files in chunks instead of whole files",
+          "Limit edit_file operations to necessary changes",
+          "Avoid repeated searches for same content"
+        ],
+        "toolUsagePriority": {
+          "1_lowest_cost": [
+            "list_dir",
+            "file_search",
+            "grep_search"
+          ],
+          "2_medium_cost": [
+            "read_file",
+            "edit_file",
+            "delete_file"
+          ],
+          "3_highest_cost": [
+            "codebase_search",
+            "web_search"
+          ]
+        },
+        "readFileRules": {
+          "maxLinesPerRequest": 250,
+          "preferChunkedReading": true,
+          "readEntireFileOnly": ["package.json", "tsconfig.json"]
+        }
+      }
+    }
+  }
+}

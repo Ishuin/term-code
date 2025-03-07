@@ -120,9 +120,9 @@ function formatCodeBlocks(text: string, enableHighlighting: boolean): string {
     const lines = highlightedCode.split('\n');
     const border = chalk.dim('┃');
     
-    const formattedLines = lines.map(line => `${border} ${line}`);
-    const top = chalk.dim('┏' + '━'.repeat(Math.max(...lines.map(l => l.length)) + 2) + '┓');
-    const bottom = chalk.dim('┗' + '━'.repeat(Math.max(...lines.map(l => l.length)) + 2) + '┛');
+    const formattedLines = lines.map((line: string) => `${border} ${line}`);
+    const top = chalk.dim('┏' + '━'.repeat(Math.max(...lines.map((l: string) => l.length)) + 2) + '┓');
+    const bottom = chalk.dim('┗' + '━'.repeat(Math.max(...lines.map((l: string) => l.length)) + 2) + '┛');
     
     // Add language indicator if present
     const header = language 

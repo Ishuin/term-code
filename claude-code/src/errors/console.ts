@@ -34,7 +34,9 @@ export function setupConsoleErrorHandling(errorManager: ErrorManager): void {
     
     // Track the error
     if (error) {
-      errorManager.handleError(error, {
+      // Convert error/warning to Error object if it's not one already
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      errorManager.handleError(errorObj, {
         level: ErrorLevel.MINOR,
         category: ErrorCategory.APPLICATION,
         context: { source: 'console.error' }
@@ -52,7 +54,9 @@ export function setupConsoleErrorHandling(errorManager: ErrorManager): void {
     
     // Track the warning as an informational error
     if (warning) {
-      errorManager.handleError(warning, {
+      // Convert error/warning to Error object if it's not one already
+      const warningObj = warning instanceof Error ? warning : new Error(String(warning));
+      errorManager.handleError(warningObj, {
         level: ErrorLevel.INFORMATIONAL,
         category: ErrorCategory.APPLICATION,
         context: { source: 'console.warn' }

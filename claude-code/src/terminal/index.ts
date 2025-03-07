@@ -224,7 +224,7 @@ class Terminal implements TerminalInterface {
    * Prompt user for input
    */
   async prompt<T>(options: PromptOptions): Promise<T> {
-    return createPrompt(options, this.config);
+    return createPrompt(options, this.config) as T;
   }
 
   /**

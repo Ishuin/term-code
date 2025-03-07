@@ -1,43 +1,46 @@
 {
-  "name": "claude-code",
-  "version": "0.1.0",
-  "description": "Claude Code CLI - Your AI coding assistant in the terminal",
-  "main": "dist/src/cli.js",
-  "type": "module",
+  "name": "term-code",
+  "version": "1.0.0",
+  "description": "Terminal-based AI coding assistant with Ollama integration for WSL",
+  "main": "dist/index.js",
   "bin": {
-    "claude-code": "dist/src/cli.js"
-  },
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/src/cli.js",
-    "dev": "ts-node --esm src/cli.ts",
-    "test": "jest",
-    "lint": "eslint src",
-    "clean": "rm -rf dist"
-  },
-  "keywords": [
-    "claude",
-    "ai",
-    "code",
-    "cli",
-    "assistant",
-    "anthropic"
-  ],
-  "author": "Anthropic",
-  "license": "MIT",
-  "dependencies": {
-    "node-fetch": "^3.3.1",
-    "open": "^9.1.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.4.7",
-    "typescript": "^5.1.6",
-    "ts-node": "^10.9.1",
-    "eslint": "^8.46.0",
-    "@typescript-eslint/eslint-plugin": "^6.2.1",
-    "@typescript-eslint/parser": "^6.2.1"
+    "tcode": "dist/cli.js",
+    "term-code": "dist/cli.js",
+    "ollama-cli": "ollama.js"
   },
   "engines": {
     "node": ">=18.0.0"
-  }
-} 
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "dev": "tsc -w",
+    "postinstall": "node scripts/post-install.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^0.2.29",
+    "node-fetch": "^3.3.2",
+    "open": "^10.1.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.8",
+    "@types/uuid": "^10.0.0"
+  },
+  "os": ["linux", "darwin"],
+  "preferGlobal": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/term-code.git"
+  },
+  "keywords": [
+    "ai",
+    "terminal",
+    "ollama",
+    "wsl",
+    "code",
+    "assistant"
+  ],
+  "type": "module"
+}

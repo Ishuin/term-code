@@ -252,6 +252,9 @@ export class AuthManager extends EventEmitter {
    * Authenticate using OAuth flow
    */
   private async authenticateWithOAuth(): Promise<AuthResult> {
+    if (!this.config.oauth) {
+      throw new Error('OAuth configuration is required');
+    }
     return performOAuthFlow(this.config.oauth);
   }
 
@@ -267,7 +270,7 @@ export class AuthManager extends EventEmitter {
     logger.debug('Refreshing authentication token');
     
     try {
-      const newToken = await refreshOAuthToken(this.currentToken.refreshToken, this.config.oauth);
+      const newToken = await this.refreshOAuthToken();
       
       // Update the current token
       this.currentToken = newToken;
@@ -289,6 +292,22 @@ export class AuthManager extends EventEmitter {
       
       throw error;
     }
+  }
+
+  /**
+   * Refresh the OAuth token
+   */
+  private async refreshOAuthToken(): Promise<AuthToken> {
+    if (!this.config.oauth) {
+      throw new Error('OAuth configuration is required');
+    }
+    
+    if (!this.currentToken || !this.currentToken.refreshToken) {
+      throw new Error('No refresh token available');
+    }
+    
+    const newToken = await refreshOAuthToken(this.currentToken.refreshToken, this.config.oauth);
+    return newToken;
   }
 
   /**
@@ -329,7 +348,7 @@ export class AuthManager extends EventEmitter {
    */
   private setState(newState: AuthState): void {
     if (this.state !== newState) {
-      logger.debug(`Authentication state changed: ${AuthState[this.state]} → ${AuthState[newState]}`);
+      logger.debug(`Authentication state changed: ${this.state} → ${newState}`);
       this.state = newState;
       this.emit(AUTH_EVENTS.STATE_CHANGED, newState);
     }

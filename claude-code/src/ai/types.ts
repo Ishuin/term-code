@@ -212,4 +212,9 @@ export interface AIClientInterface {
    * Disconnect from the AI service
    */
   disconnect(): Promise<void>;
+
+  /**
+   * Generate a completion (backward compatibility method)
+   */
+  complete?(prompt: string, options?: CompletionOptions): Promise<CompletionResponse>;
 } 
