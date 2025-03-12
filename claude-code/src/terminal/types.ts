@@ -4,6 +4,8 @@
  * Type definitions for the terminal interface module.
  */
 
+import { AIProvider } from '../ai/providers/index.js';
+
 /**
  * Terminal theme options
  */
@@ -42,6 +44,11 @@ export interface TerminalConfig {
    * Maximum terminal width (columns)
    */
   maxWidth?: number;
+
+  /**
+   * Active AI provider
+   */
+  provider?: AIProvider;
 }
 
 /**
@@ -248,4 +255,14 @@ export interface TerminalInterface {
    * Create a spinner for showing progress
    */
   spinner(text: string, id?: string): SpinnerInstance;
+
+  /**
+   * Update the active provider for terminal customization
+   */
+  updateProvider(provider: AIProvider): void;
+
+  /**
+   * Get the provider-specific prompt text
+   */
+  getPromptText(): string;
 } 

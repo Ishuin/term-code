@@ -568,7 +568,7 @@ export async function initCommandProcessor(
             const input = await terminal.prompt({
               type: 'input',
               name: 'command',
-              message: 'claude-code>',
+              message: terminal.getPromptText(),
               prefix: '',
             });
             

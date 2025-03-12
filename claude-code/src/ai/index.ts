@@ -16,12 +16,18 @@ import { createAIClient, AIProvider, ProviderConfig } from './providers/index.js
 // Singleton AI client instance
 let aiClient: AIClientInterface | null = null;
 let activeProvider: AIProvider | null = null;
+let terminalInstance: any = null;  // Store terminal reference
 
 /**
  * Initialize the AI module
  */
-export async function initAI(config: any = {}): Promise<AIClientInterface> {
+export async function initAI(config: any = {}, terminal: any = null): Promise<AIClientInterface> {
   logger.info('Initializing AI module');
+  
+  // Store terminal reference if provided
+  if (terminal) {
+    terminalInstance = terminal;
+  }
   
   try {
     // Check which provider to use - first from config, then from env var
@@ -76,6 +82,12 @@ export async function initAI(config: any = {}): Promise<AIClientInterface> {
     aiClient = createAIClient(providerConfig);
     activeProvider = providerConfig.provider || AIProvider.OLLAMA;
     
+    // Update terminal interface with new provider
+    if (terminalInstance && typeof terminalInstance.updateProvider === 'function') {
+      terminalInstance.updateProvider(activeProvider);
+      logger.debug(`Terminal interface updated for provider: ${activeProvider}`);
+    }
+    
     // Test connection
     logger.debug('Testing connection to AI service');
     const connectionSuccess = await aiClient.testConnection();
@@ -97,6 +109,18 @@ export async function initAI(config: any = {}): Promise<AIClientInterface> {
       category: ErrorCategory.INITIALIZATION,
       resolution: 'Check your settings and internet connection, then try again.'
     });
+  }
+}
+
+/**
+ * Set terminal instance for provider updates
+ */
+export function setTerminalInstance(terminal: any): void {
+  terminalInstance = terminal;
+  
+  // Update terminal with current provider if available
+  if (terminal && activeProvider && typeof terminal.updateProvider === 'function') {
+    terminal.updateProvider(activeProvider);
   }
 }
 

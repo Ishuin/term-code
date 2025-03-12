@@ -14,6 +14,34 @@ import { logger } from '../utils/logger.js';
 import { TerminalInterface, TerminalConfig, PromptOptions, SpinnerInstance } from './types.js';
 import { formatOutput, clearScreen, getTerminalSize } from './formatting.js';
 import { createPrompt } from './prompt.js';
+import { getActiveProvider, AIProvider } from '../ai/index.js';
+
+// Provider-specific terminal configurations
+interface ProviderTerminalConfig {
+  promptText: string;
+  welcomeTitle: string;
+  welcomeSubtitle: string;
+  welcomeTip: string;
+  providerColor: string;
+}
+
+// Provider terminal configurations
+const PROVIDER_CONFIGS: Record<string, ProviderTerminalConfig> = {
+  [AIProvider.CLAUDE]: {
+    promptText: 'claude-code>',
+    welcomeTitle: 'Claude Code CLI',
+    welcomeSubtitle: 'Research Preview',
+    welcomeTip: 'Pro tip: Use Ctrl+C to interrupt Claude and start over.',
+    providerColor: 'blue'
+  },
+  [AIProvider.OLLAMA]: {
+    promptText: 'ollama-code>',
+    welcomeTitle: 'Term-Code with OLLAMA',
+    welcomeSubtitle: 'Terminal-based AI coding assistant',
+    welcomeTip: 'Pro tip: Use ollama:list to see available models.',
+    providerColor: 'green'
+  }
+};
 
 /**
  * Initialize the terminal interface
@@ -28,6 +56,7 @@ export async function initTerminal(config: any): Promise<TerminalInterface> {
     codeHighlighting: config.terminal?.codeHighlighting !== false,
     maxHeight: config.terminal?.maxHeight,
     maxWidth: config.terminal?.maxWidth,
+    provider: config.provider || AIProvider.OLLAMA // Default to Ollama
   };
   
   const terminal = new Terminal(terminalConfig);
@@ -54,6 +83,7 @@ class Terminal implements TerminalInterface {
   private terminalWidth: number;
   private terminalHeight: number;
   private isInteractive: boolean;
+  private providerConfig: ProviderTerminalConfig;
 
   constructor(config: TerminalConfig) {
     this.config = config;
@@ -66,6 +96,10 @@ class Terminal implements TerminalInterface {
     // Assume interactive by default
     this.isInteractive = process.stdout.isTTY && process.stdin.isTTY;
     
+    // Set provider configuration based on active provider or config
+    const provider = config.provider || getActiveProvider() || AIProvider.OLLAMA;
+    this.providerConfig = PROVIDER_CONFIGS[provider] || PROVIDER_CONFIGS[AIProvider.OLLAMA];
+    
     // Listen for terminal resize events
     process.stdout.on('resize', () => {
       const { rows, columns } = getTerminalSize();
@@ -73,6 +107,14 @@ class Terminal implements TerminalInterface {
       this.terminalWidth = config.maxWidth || columns;
       logger.debug(`Terminal resized to ${columns}x${rows}`);
     });
+  }
+
+  /**
+   * Update terminal provider configuration
+   */
+  updateProvider(provider: AIProvider): void {
+    this.providerConfig = PROVIDER_CONFIGS[provider] || PROVIDER_CONFIGS[AIProvider.OLLAMA];
+    logger.debug(`Terminal provider updated to ${provider}`);
   }
 
   /**
@@ -102,18 +144,26 @@ class Terminal implements TerminalInterface {
     this.clear();
     
     const version = '0.2.29'; // This should come from package.json
+    const colorFn = chalk[this.providerConfig.providerColor as keyof typeof chalk] || chalk.blue;
     
     // Main logo/header
-    console.log(chalk.blue.bold('\n  Claude Code CLI'));
-    console.log(chalk.gray(`  Version ${version} (Research Preview)\n`));
+    console.log(colorFn.bold(`\n  ${this.providerConfig.welcomeTitle}`));
+    console.log(chalk.gray(`  Version ${version} (${this.providerConfig.welcomeSubtitle})\n`));
     
     console.log(chalk.white(`  Welcome! Type ${chalk.cyan('/help')} to see available commands.`));
-    console.log(chalk.white(`  You can ask Claude to explain code, fix issues, or perform tasks.`));
+    console.log(chalk.white(`  You can ask ${getActiveProvider() || 'AI'} to explain code, fix issues, or perform tasks.`));
     console.log(chalk.white(`  Example: "${chalk.italic('Please analyze this codebase and explain its structure.')}"\n`));
 
     if (this.config.useColors) {
-      console.log(chalk.dim('  Pro tip: Use Ctrl+C to interrupt Claude and start over.\n'));
+      console.log(chalk.dim(`  ${this.providerConfig.welcomeTip}\n`));
     }
+  }
+
+  /**
+   * Get the provider-specific prompt text
+   */
+  getPromptText(): string {
+    return this.providerConfig.promptText;
   }
 
   /**

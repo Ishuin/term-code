@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * Simple direct script to run Term-Code with Ollama
- * This bypasses any installation issues and runs the CLI directly
+ * Term-Code with Ollama Integration
+ * 
+ * This script provides both interactive and single-command modes for the
+ * Terminal-based AI coding assistant with Ollama integration.
  */
 
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 import { existsSync, writeFileSync, mkdirSync, readFileSync } from 'fs';
 import { spawnSync } from 'child_process';
+import { createInterface } from 'readline';
 
 // Get script directory (using ES modules approach)
 const __filename = fileURLToPath(import.meta.url);
@@ -44,6 +47,7 @@ try {
 // Set environment variables
 process.env.OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || ollamaBaseUrl;
 process.env.OLLAMA_PROVIDER = 'true'; // Explicitly enable Ollama provider
+process.env.TERM_CODE_PROVIDER = 'ollama'; // Set provider for modular interface
 
 // Test Ollama connection
 async function testOllamaConnection() {
@@ -107,8 +111,11 @@ if (!ollamaConnected) {
   console.log('Please check that Ollama is running and the server URL is correct.');
 }
 
-// Show Ollama-specific help if no arguments provided
-if (process.argv.length <= 2) {
+// Determine whether to run in interactive mode
+const isInteractiveMode = process.argv.includes('--interactive') || process.argv.includes('-i');
+
+// Show help if no arguments provided and not in interactive mode
+if (process.argv.length <= 2 && !isInteractiveMode) {
   console.log(`
 \x1b[33mOllama Commands:\x1b[0m
   ollama:list              List available models
@@ -123,32 +130,105 @@ if (process.argv.length <= 2) {
   fix <file>               Fix issues in a file
   refactor <file>          Refactor code in a file
   
+\x1b[33mRunning Modes:\x1b[0m
+  --interactive, -i        Run in interactive chat mode
+
 \x1b[33mExamples:\x1b[0m
   $ tcode ollama:list
   $ tcode ollama:use deepseek-r1:8b
   $ tcode ask "How do I implement quicksort?"
+  $ tcode --interactive    Start in interactive chat mode
 `);
+  process.exit(0);
 }
 
-// Transform command line arguments for Ollama commands
-if (process.argv[2] && process.argv[2].startsWith('ollama:')) {
-  const originalCommand = process.argv[2];
-  console.log(`\x1b[32m✓\x1b[0m Running Ollama command: ${originalCommand}`);
-}
-
-// Run in a subprocess to isolate module loading issues
-const cliPath = resolve(__dirname, 'dist', 'cli.js');
-
-if (existsSync(cliPath)) {
-  console.log(`\x1b[32m✓\x1b[0m Launching CLI module...`);
-  const result = spawnSync('node', [cliPath, ...process.argv.slice(2)], {
-    stdio: 'inherit',
-    env: process.env
-  });
+// Create a simple interactive terminal interface if in interactive mode
+if (isInteractiveMode) {
+  console.log(`\x1b[32m✓\x1b[0m Starting interactive chat mode...\n`);
   
-  process.exit(result.status || 0);
+  // Run the CLI module with initial 'help' command to show available commands
+  const cliPath = resolve(__dirname, 'dist', 'cli.js');
+  
+  if (existsSync(cliPath)) {
+    console.log(`\x1b[32m✓\x1b[0m Launching CLI module...\n`);
+    
+    // First show the help to display available commands
+    spawnSync('node', [cliPath, 'help'], {
+      stdio: 'inherit',
+      env: process.env
+    });
+    
+    // Create an interactive session
+    const rl = createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      prompt: 'ollama-code> '
+    });
+    
+    console.log('\n\x1b[32m✓\x1b[0m Interactive mode started. Type your questions or commands below:');
+    console.log('\x1b[33m✓\x1b[0m Type "exit" or "quit" to end the session\n');
+    
+    rl.prompt();
+    
+    rl.on('line', (line) => {
+      const input = line.trim();
+      
+      if (input === 'exit' || input === 'quit' || input === 'q') {
+        console.log('Exiting interactive mode...');
+        rl.close();
+        process.exit(0);
+      }
+      
+      if (input === '') {
+        rl.prompt();
+        return;
+      }
+      
+      // Parse input into command and args
+      const parts = input.split(' ');
+      const command = parts[0];
+      const args = parts.slice(1);
+      
+      // Run the command
+      const result = spawnSync('node', [cliPath, command, ...args], {
+        stdio: 'inherit',
+        env: process.env
+      });
+      
+      rl.prompt();
+    });
+    
+    rl.on('close', () => {
+      console.log('\nGoodbye!');
+      process.exit(0);
+    });
+  } else {
+    console.error(`\x1b[31m✗\x1b[0m Error: CLI module not found at ${cliPath}`);
+    console.error('Please verify your installation or build the project with: npm run build');
+    process.exit(1);
+  }
 } else {
-  console.error(`\x1b[31m✗\x1b[0m Error: CLI module not found at ${cliPath}`);
-  console.error('Please verify your installation or build the project with: npm run build');
-  process.exit(1);
+  // Filter out interactive flags
+  let args = process.argv.slice(2).filter(arg => arg !== '--interactive' && arg !== '-i');
+  
+  if (args.length > 0) {
+    console.log(`\x1b[32m✓\x1b[0m Running command: ${args.join(' ')}`);
+  }
+  
+  // Run the CLI module for a single command
+  const cliPath = resolve(__dirname, 'dist', 'cli.js');
+  
+  if (existsSync(cliPath)) {
+    console.log(`\x1b[32m✓\x1b[0m Launching CLI module...`);
+    const result = spawnSync('node', [cliPath, ...args], {
+      stdio: 'inherit',
+      env: process.env
+    });
+    
+    process.exit(result.status || 0);
+  } else {
+    console.error(`\x1b[31m✗\x1b[0m Error: CLI module not found at ${cliPath}`);
+    console.error('Please verify your installation or build the project with: npm run build');
+    process.exit(1);
+  }
 } 

@@ -1,22 +1,28 @@
 #!/bin/bash
 
-# Create a symlink in the home directory that will work from anywhere
+# Create symlinks for Term-Code with Ollama
+# This script creates symlinks in ~/bin for easier access
 
-# Get the absolute path to this directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Target path in home directory
-TARGET="$HOME/ollama-cli"
+echo "Creating symlinks for Term-Code with Ollama..."
 
-# Create the symlink
-echo "Creating symlink at $TARGET pointing to $SCRIPT_DIR/ollama-cli.sh"
-ln -sf "$SCRIPT_DIR/ollama-cli.sh" "$TARGET"
+# Create ~/bin directory if it doesn't exist
+mkdir -p ~/bin
 
-# Make it executable (just in case)
-chmod +x "$SCRIPT_DIR/ollama-cli.sh"
-chmod +x "$TARGET"
+# Create symlink for direct path access
+ln -sf "$SCRIPT_DIR/term-code" ~/bin/tcode
 
-echo "✅ Symlink created successfully!"
-echo "You can now run 'ollama-cli' from anywhere:"
-echo "  $TARGET list"
-echo "  $TARGET info deepseek-r1:8b" 
+# Make the script executable
+chmod +x "$SCRIPT_DIR/term-code"
+
+echo "Done! You can now use 'tcode' from anywhere."
+echo "Try 'tcode --interactive' to start interactive mode."
+echo "Make sure ~/bin is in your PATH."
+
+# Add ~/bin to PATH if not already there
+if ! grep -q "export PATH=\"\$HOME/bin:\$PATH\"" ~/.bashrc; then
+  echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+  echo "Added ~/bin to PATH in ~/.bashrc. Please run 'source ~/.bashrc'."
+fi 

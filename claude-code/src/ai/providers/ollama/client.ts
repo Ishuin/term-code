@@ -73,12 +73,31 @@ export class OllamaClient implements AIClientInterface {
   async listModels(): Promise<OllamaListModelsResponse> {
     const url = `${this._config.baseUrl}/api/tags`;
     
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to list models: ${response.statusText}`);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to list models: ${response.statusText} - ${errorText}`);
+      }
+      
+      const data = await response.json() as any;
+      
+      // Ensure the response has the expected format
+      if (!data || !Array.isArray(data.models)) {
+        logger.warn('Unexpected response format from Ollama API', { data });
+        // Return a safe default
+        return { models: [] };
+      }
+      
+      return data as OllamaListModelsResponse;
+    } catch (error) {
+      logger.error('Error listing Ollama models', { 
+        error: error instanceof Error ? error.message : String(error),
+        url 
+      });
+      // Return an empty list instead of throwing
+      return { models: [] };
     }
-    
-    return await response.json() as OllamaListModelsResponse;
   }
 
   /**
@@ -86,10 +105,18 @@ export class OllamaClient implements AIClientInterface {
    */
   async getModelInfo(modelName: string): Promise<OllamaModel | null> {
     try {
-      const models = await this.listModels();
-      return models.models.find(model => model.name === modelName) || null;
+      const result = await this.listModels();
+      
+      if (!result || !Array.isArray(result.models)) {
+        logger.warn(`Failed to get model info for ${modelName}: Invalid response format`);
+        return null;
+      }
+      
+      return result.models.find(model => model.name === modelName) || null;
     } catch (error) {
-      logger.error(`Failed to get model info for ${modelName}`, error);
+      logger.error(`Failed to get model info for ${modelName}`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return null;
     }
   }
