@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# AI Coding Assistant Launcher
+# This script launches the Term-Code with Ollama interface
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Make sure node is available
+if ! command -v node &> /dev/null; then
+    echo "Error: node is not installed or not in your PATH"
+    echo "Please install Node.js (version 18 or higher)"
+    exit 1
+fi
+
+# Launch the command using node directly
+exec node "$SCRIPT_DIR/run-term-code.js" "$@" 
